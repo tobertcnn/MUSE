@@ -269,47 +269,46 @@ def read_txt_embeddings(params, source, full_vocab):
     vectors = []
 
     # load pretrained embeddings
-    lang = params.src_lang if source else params.tgt_lang
+    lang = 'em'
     emb_path = params.src_emb if source else params.tgt_emb
     _emb_dim_file = params.emb_dim
     with io.open(emb_path, 'r', encoding='utf-8', newline='\n', errors='ignore') as f:
+        next(f)
         for i, line in enumerate(f):
-            if i == 0:
+            '''if i == 0:
                 split = line.split()
                 assert len(split) == 2
                 assert _emb_dim_file == int(split[1])
+            else:'''
+            word, vect = line.replace('"', '').rstrip().split(' ', 1)
+            '''if not full_vocab:
+                word = word.lower()'''
+            vect = np.fromstring(vect, sep=' ')
+            if np.linalg.norm(vect) == 0:  # avoid to have null embeddings
+                vect[0] = 0.01
+            if word in word2id:
+                if full_vocab:
+                    logger.warning("Word '%s' found twice in %s embedding file"
+                                    % (word, 'source' if source else 'target'))
             else:
-                word, vect = line.rstrip().split(' ', 1)
-                if not full_vocab:
-                    word = word.lower()
-                vect = np.fromstring(vect, sep=' ')
-                if np.linalg.norm(vect) == 0:  # avoid to have null embeddings
-                    vect[0] = 0.01
-                if word in word2id:
-                    if full_vocab:
-                        logger.warning("Word '%s' found twice in %s embedding file"
-                                       % (word, 'source' if source else 'target'))
-                else:
-                    if not vect.shape == (_emb_dim_file,):
-                        logger.warning("Invalid dimension (%i) for %s word '%s' in line %i."
-                                       % (vect.shape[0], 'source' if source else 'target', word, i))
-                        continue
-                    assert vect.shape == (_emb_dim_file,), i
-                    word2id[word] = len(word2id)
-                    vectors.append(vect[None])
+                if not vect.shape == (_emb_dim_file,):
+                    logger.warning("Invalid dimension (%i) for %s word '%s' in line %i."
+                                    % (vect.shape[0], 'source' if source else 'target', word, i))
+                    continue
+                assert vect.shape == (_emb_dim_file,), i
+                word2id[word] = len(word2id)
+                vectors.append(vect)
             if params.max_vocab > 0 and len(word2id) >= params.max_vocab and not full_vocab:
                 break
 
     assert len(word2id) == len(vectors)
     logger.info("Loaded %i pre-trained word embeddings." % len(vectors))
-
     # compute new vocabulary / embeddings
     id2word = {v: k for k, v in word2id.items()}
     dico = Dictionary(id2word, word2id, lang)
-    embeddings = np.concatenate(vectors, 0)
+    embeddings = np.vstack(vectors)
     embeddings = torch.from_numpy(embeddings).float()
-    embeddings = embeddings.cuda() if (params.cuda and not full_vocab) else embeddings
-
+    #embeddings = embeddings.cuda() if (params.cuda and not full_vocab) else embeddings
     assert embeddings.size() == (len(dico), params.emb_dim)
     return dico, embeddings
 
@@ -398,12 +397,12 @@ def load_embeddings(params, source, full_vocab=False):
     """
     assert type(source) is bool and type(full_vocab) is bool
     emb_path = params.src_emb if source else params.tgt_emb
-    if emb_path.endswith('.pth'):
+    '''if emb_path.endswith('.pth'):
         return load_pth_embeddings(params, source, full_vocab)
     if emb_path.endswith('.bin'):
         return load_bin_embeddings(params, source, full_vocab)
-    else:
-        return read_txt_embeddings(params, source, full_vocab)
+    else:'''
+    return read_txt_embeddings(params, source, full_vocab)
 
 
 def normalize_embeddings(emb, types, mean=None):

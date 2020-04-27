@@ -66,10 +66,15 @@ class Trainer(object):
             tgt_ids = tgt_ids.cuda()
 
         # get word embeddings
-        src_emb = self.src_emb(Variable(src_ids, volatile=True))
-        tgt_emb = self.tgt_emb(Variable(tgt_ids, volatile=True))
-        src_emb = self.mapping(Variable(src_emb.data, volatile=volatile))
-        tgt_emb = Variable(tgt_emb.data, volatile=volatile)
+        with torch.no_grad():
+            src_emb = self.src_emb(Variable(src_ids))
+        with torch.no_grad():
+            tgt_emb = self.tgt_emb(Variable(tgt_ids))
+        if volatile == True:
+            with torch.no_grad():
+                src_emb = self.mapping(Variable(src_emb.data))
+        else:
+            tgt_emb = Variable(tgt_emb.data, requires_grad=True)
 
         # input / target
         x = torch.cat([src_emb, tgt_emb], 0)
@@ -139,18 +144,17 @@ class Trainer(object):
         word2id2 = self.tgt_dico.word2id
 
         # identical character strings
-        if dico_train == "identical_char":
-            self.dico = load_identical_char_dico(word2id1, word2id2)
-        # use one of the provided dictionary
-        elif dico_train == "default":
-            filename = '%s-%s.0-5000.txt' % (self.params.src_lang, self.params.tgt_lang)
-            self.dico = load_dictionary(
-                os.path.join(DIC_EVAL_PATH, filename),
-                word2id1, word2id2
-            )
-        # dictionary provided by the user
+        '''if dico_train == "identical_char":
+            self.dico = load_identical_char_dico(word2id1, word2id2)'''
+        # use one of the provided dictionary   
+        filename = 'Users/tobert/Documents/Github/MUSE/data/main_list.txt'
+        self.dico = load_dictionary(
+            os.path.join(DIC_EVAL_PATH, filename),
+            word2id1, word2id2
+        )
+        '''# dictionary provided by the user
         else:
-            self.dico = load_dictionary(dico_train, word2id1, word2id2)
+            self.dico = load_dictionary(dico_train, word2id1, word2id2)'''
 
         # cuda
         if self.params.cuda:
@@ -259,7 +263,8 @@ class Trainer(object):
         bs = 4096
         logger.info("Map source embeddings to the target space ...")
         for i, k in enumerate(range(0, len(src_emb), bs)):
-            x = Variable(src_emb[k:k + bs], volatile=True)
+            with torch.no_grad():
+                x = Variable(src_emb[k:k + bs])
             src_emb[k:k + bs] = self.mapping(x.cuda() if params.cuda else x).data.cpu()
 
         # write embeddings to the disk

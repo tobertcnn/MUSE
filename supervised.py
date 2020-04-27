@@ -28,14 +28,14 @@ parser.add_argument("--verbose", type=int, default=2, help="Verbose level (2:deb
 parser.add_argument("--exp_path", type=str, default="", help="Where to store experiment logs and models")
 parser.add_argument("--exp_name", type=str, default="debug", help="Experiment name")
 parser.add_argument("--exp_id", type=str, default="", help="Experiment ID")
-parser.add_argument("--cuda", type=bool_flag, default=True, help="Run on GPU")
+parser.add_argument("--cuda", type=bool_flag, default=False, help="Run on GPU")
 parser.add_argument("--export", type=str, default="txt", help="Export embeddings after training (txt / pth)")
 
 # data
-parser.add_argument("--src_lang", type=str, default='en', help="Source language")
-parser.add_argument("--tgt_lang", type=str, default='es', help="Target language")
-parser.add_argument("--emb_dim", type=int, default=300, help="Embedding dimension")
-parser.add_argument("--max_vocab", type=int, default=200000, help="Maximum vocabulary size (-1 to disable)")
+parser.add_argument("--src_lang", type=str, default=None, help="Source language")
+parser.add_argument("--tgt_lang", type=str, default=None, help="Target language")
+parser.add_argument("--emb_dim", type=int, default=768, help="Embedding dimension")
+parser.add_argument("--max_vocab", type=int, default=2000000000, help="Maximum vocabulary size (-1 to disable)")
 # training refinement
 parser.add_argument("--n_refinement", type=int, default=5, help="Number of refinement iterations (0 to disable the refinement procedure)")
 # dictionary creation parameters (for refinement)
@@ -44,12 +44,12 @@ parser.add_argument("--dico_eval", type=str, default="default", help="Path to ev
 parser.add_argument("--dico_method", type=str, default='csls_knn_10', help="Method used for dictionary generation (nn/invsm_beta_30/csls_knn_10)")
 parser.add_argument("--dico_build", type=str, default='S2T&T2S', help="S2T,T2S,S2T|T2S,S2T&T2S")
 parser.add_argument("--dico_threshold", type=float, default=0, help="Threshold confidence for dictionary generation")
-parser.add_argument("--dico_max_rank", type=int, default=10000, help="Maximum dictionary words rank (0 to disable)")
+parser.add_argument("--dico_max_rank", type=int, default=0, help="Maximum dictionary words rank (0 to disable)")
 parser.add_argument("--dico_min_size", type=int, default=0, help="Minimum generated dictionary size (0 to disable)")
 parser.add_argument("--dico_max_size", type=int, default=0, help="Maximum generated dictionary size (0 to disable)")
 # reload pre-trained embeddings
-parser.add_argument("--src_emb", type=str, default='', help="Reload source embeddings")
-parser.add_argument("--tgt_emb", type=str, default='', help="Reload target embeddings")
+parser.add_argument("--src_emb", type=str, default='data/cep768.txt', help="Reload source embeddings")
+parser.add_argument("--tgt_emb", type=str, default='data/nlp.txt', help="Reload target embeddings")
 parser.add_argument("--normalize_embeddings", type=str, default="", help="Normalize embeddings before training")
 
 
@@ -85,7 +85,7 @@ logger.info("Validation metric: %s" % VALIDATION_METRIC)
 Learning loop for Procrustes Iterative Learning
 """
 for n_iter in range(params.n_refinement + 1):
-
+    print(n_iter)
     logger.info('Starting iteration %i...' % n_iter)
 
     # build a dictionary from aligned embeddings (unless
@@ -98,7 +98,7 @@ for n_iter in range(params.n_refinement + 1):
 
     # embeddings evaluation
     to_log = OrderedDict({'n_iter': n_iter})
-    evaluator.all_eval(to_log)
+    #evaluator.all_eval(to_log)
 
     # JSON log / save best model / end of epoch
     logger.info("__log__:%s" % json.dumps(to_log))
@@ -107,6 +107,5 @@ for n_iter in range(params.n_refinement + 1):
 
 
 # export embeddings
-if params.export:
-    trainer.reload_best()
-    trainer.export()
+trainer.reload_best()
+trainer.export()
